@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>APAC UAT Progress · Tate & Lyle</title>
+  <link rel="stylesheet" href="assets/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+  <div id="topbar-mount"></div>
+
+  <div class="page" id="page">
+    <div class="page-header">
+      <div class="page-title">
+        <div class="breadcrumbs">
+          <a href="index.html">UAT Progress</a>
+          <span class="sep">›</span>
+          <span>APAC</span>
+        </div>
+        <h1>APAC UAT Dashboard <span class="pill slate" style="margin-left:8px;vertical-align:middle">Region</span></h1>
+      </div>
+      <div class="flex gap-sm">
+        <button class="btn" id="btnReset">Clear my actuals</button>
+        <button class="btn primary" id="btnSave">Save changes</button>
+      </div>
+    </div>
+
+    <!-- KPI Row -->
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <!-- Top row: planned vs actual + status donut -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <h3>Planned vs Actual Progress</h3>
+          <div class="actions"><span class="muted" style="font-size:11px">Cumulative completed scenarios</span></div>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap tall"><canvas id="lineChart"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Current Status</h3>
+          <div class="actions"><span class="muted" style="font-size:11px">Across all modules</span></div>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap donut"><canvas id="donutChart"></canvas></div>
+          <div id="donutLegend" style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Module breakdown with filters -->
+    <div class="card mb-md">
+      <div class="card-header">
+        <h3>Module Breakdown</h3>
+        <div class="actions">
+          <div class="filter-bar" id="filterBar">
+            <span class="muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px">Filter:</span>
+            <button class="filter-chip active" data-filter="all">All</button>
+            <button class="filter-chip" data-filter="pass"><span class="dot pass"></span>Pass</button>
+            <button class="filter-chip" data-filter="fail"><span class="dot fail"></span>Fail</button>
+            <button class="filter-chip" data-filter="in-progress"><span class="dot in-progress"></span>In Progress</button>
+            <button class="filter-chip" data-filter="not-started"><span class="dot not-started"></span>Not Started</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div id="moduleProgress" style="padding:8px 18px"></div>
+      </div>
+    </div>
+
+    <!-- Daily entry form -->
+    <div class="card mb-md">
+      <div class="card-header">
+        <h3>Update Daily Progress</h3>
+        <div class="actions">
+          <span class="muted" style="font-size:12px">Date:</span>
+          <select class="filter-select" id="entryDate"></select>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="muted" style="margin-top:0;font-size:12px">Enter cumulative pass / fail / in-progress counts per module for the selected date. Numbers reflect totals achieved up to and including that day.</p>
+        <table class="entry-table">
+          <thead>
+            <tr>
+              <th>Module</th>
+              <th class="num">Total</th>
+              <th class="num">Planned</th>
+              <th class="num">Pass</th>
+              <th class="num">Fail</th>
+              <th class="num">In Progress</th>
+              <th class="num">Done</th>
+              <th class="num">Δ vs planned</th>
+            </tr>
+          </thead>
+          <tbody id="entryBody"></tbody>
+          <tfoot>
+            <tr style="background:var(--slate-50);font-weight:600">
+              <td>TOTAL</td>
+              <td class="num total-cell" id="totTotal"></td>
+              <td class="num planned-cell" id="totPlanned"></td>
+              <td class="num total-cell" id="totPass" style="color:var(--green)"></td>
+              <td class="num total-cell" id="totFail" style="color:var(--red)"></td>
+              <td class="num total-cell" id="totIp" style="color:var(--amber)"></td>
+              <td class="num total-cell" id="totDone"></td>
+              <td class="num delta-cell" id="totDelta"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Calendar heatmap -->
+    <div class="card mb-md">
+      <div class="card-header">
+        <h3>Daily Calendar</h3>
+        <div class="actions"><span class="muted" style="font-size:11px">
+          <span class="status-dot pass"></span>On track
+          <span class="status-dot in-progress" style="margin-left:8px"></span>Partial
+          <span class="status-dot fail" style="margin-left:8px"></span>Behind
+        </span></div>
+      </div>
+      <div class="card-body">
+        <div class="calendar" id="calendar"></div>
+      </div>
+    </div>
+
+    <!-- Module size config -->
+    <div class="card mb-md">
+      <div class="card-header">
+        <h3>Module Configuration</h3>
+        <div class="actions"><span class="muted" style="font-size:11px">Adjust scenario counts (saved locally)</span></div>
+      </div>
+      <div class="card-body">
+        <p class="muted" style="margin-top:0;font-size:12px">Default total is 143 scenarios. Adjust the per-module counts below if your scope differs. Changes are saved to your browser only.</p>
+        <table class="entry-table">
+          <thead>
+            <tr>
+              <th>Module</th>
+              <th class="num">Scenarios</th>
+              <th>Testing days</th>
+            </tr>
+          </thead>
+          <tbody id="configBody"></tbody>
+          <tfoot>
+            <tr style="background:var(--slate-50);font-weight:600">
+              <td>TOTAL</td>
+              <td class="num total-cell" id="cfgTotal"></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    UAT Progress Dashboard · Tate &amp; Lyle ·
+    Data persists in your browser (localStorage). For shared visibility, export and share manually.
+  </div>
+
+  <script src="assets/dashboard.js"></script>
+  <script>
+    // ============ Page bootstrap ============
+    const REGION_CODE = "apac";
+
+    // Embed the JSON data directly so the page works on any static host without fetch issues
+    const DATA = /*INJECT_DATA_apac*/ null;
+
+    document.getElementById("topbar-mount").outerHTML = Dashboard.renderTopbar(REGION_CODE);
+    initRegionPage(DATA);
+
+    function initRegionPage(data) {
+      // Load any module-size overrides (allow user to adjust scenarios per module)
+      const cfgKey = `uat_dashboard_${REGION_CODE}_config_v1`;
+      let cfgOverrides = {};
+      try { cfgOverrides = JSON.parse(localStorage.getItem(cfgKey) || "{}"); } catch (e) {}
+      data.modules.forEach(m => {
+        if (cfgOverrides[m.id] && typeof cfgOverrides[m.id].scenarios === "number") {
+          m.scenarios = cfgOverrides[m.id].scenarios;
+        }
+      });
+      data.totalScenarios = data.modules.reduce((s, m) => s + m.scenarios, 0);
+
+      let actuals = Dashboard.loadActuals(REGION_CODE);
+      const planned = Dashboard.computePlannedPerDay(data);
+
+      // ---- KPIs ----
+      function renderKPIs() {
+        const cur = Dashboard.computeCurrentActuals(data, actuals);
+        const today = Dashboard.todayISO();
+        // Find latest planned <= today
+        let plannedToday = 0;
+        const validDays = data.workingDays.filter(d => d <= today);
+        if (validDays.length) plannedToday = planned[validDays[validDays.length - 1]].total;
+
+        const total = data.totalScenarios;
+        const done = cur.total.pass + cur.total.fail + cur.total.inProgress;
+        const passPct = total ? (cur.total.pass / total) * 100 : 0;
+        const failPct = total ? (cur.total.fail / total) * 100 : 0;
+        const donePct = total ? (done / total) * 100 : 0;
+        const plannedPct = total ? (plannedToday / total) * 100 : 0;
+        const delta = done - plannedToday;
+        const deltaCls = delta > 0 ? "up" : (delta < 0 ? "down" : "flat");
+        const deltaSign = delta > 0 ? "+" : "";
+
+        document.getElementById("kpiRow").innerHTML = `
+          <div class="kpi">
+            <div class="kpi-label">Total Scenarios</div>
+            <div class="kpi-value">${total}</div>
+            <div class="kpi-sub">${data.modules.length} modules in scope</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Planned by today</div>
+            <div class="kpi-value">${plannedToday}<span class="unit">/ ${total}</span></div>
+            <div class="kpi-sub">${plannedPct.toFixed(0)}% of total</div>
+          </div>
+          <div class="kpi green">
+            <div class="kpi-label">Pass</div>
+            <div class="kpi-value">${cur.total.pass}<span class="unit">/ ${total}</span></div>
+            <div class="kpi-sub">${passPct.toFixed(1)}% pass rate</div>
+          </div>
+          <div class="kpi red">
+            <div class="kpi-label">Fail</div>
+            <div class="kpi-value">${cur.total.fail}<span class="unit">/ ${total}</span></div>
+            <div class="kpi-sub">${failPct.toFixed(1)}% fail rate</div>
+          </div>
+          <div class="kpi amber">
+            <div class="kpi-label">In Progress</div>
+            <div class="kpi-value">${cur.total.inProgress}</div>
+            <div class="kpi-sub">currently being executed</div>
+          </div>
+          <div class="kpi ${deltaCls === 'up' ? 'green' : (deltaCls === 'down' ? 'red' : 'slate')}">
+            <div class="kpi-label">Vs Planned</div>
+            <div class="kpi-value">${deltaSign}${delta}</div>
+            <div class="kpi-delta ${deltaCls}">${delta === 0 ? "On schedule" : (delta > 0 ? "Ahead of plan" : "Behind plan")}</div>
+          </div>
+        `;
+      }
+
+      // ---- Line chart: planned vs actual ----
+      let lineChart = null;
+      function renderLineChart() {
+        const ctx = document.getElementById("lineChart").getContext("2d");
+        const labels = data.workingDays.map(d => Dashboard.fmtShort(d));
+        const plannedSeries = data.workingDays.map(d => planned[d].total);
+        const actualPerDay = Dashboard.computeActualPerDay(data, actuals);
+        const today = Dashboard.todayISO();
+        // Actual series: only show data points up to today
+        const actualSeries = data.workingDays.map(d => d <= today ? actualPerDay[d].totalDone : null);
+        const passSeries   = data.workingDays.map(d => d <= today ? actualPerDay[d].totalPass : null);
+        const failSeries   = data.workingDays.map(d => d <= today ? actualPerDay[d].totalFail : null);
+
+        if (lineChart) lineChart.destroy();
+        lineChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Planned (cumulative)',
+                data: plannedSeries,
+                borderColor: '#5A6F8F',
+                backgroundColor: 'rgba(90, 111, 143, 0.08)',
+                borderWidth: 2,
+                borderDash: [4, 4],
+                tension: 0.2,
+                pointRadius: 2,
+                pointHoverRadius: 5,
+                fill: true
+              },
+              {
+                label: 'Actual completed',
+                data: actualSeries,
+                borderColor: '#16A34A',
+                backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                borderWidth: 2.5,
+                tension: 0.25,
+                pointRadius: 3,
+                pointHoverRadius: 6,
+                fill: false,
+                spanGaps: false,
+              },
+              {
+                label: 'Passed',
+                data: passSeries,
+                borderColor: '#16A34A',
+                borderWidth: 1.5,
+                borderDash: [2, 3],
+                tension: 0.25,
+                pointRadius: 0,
+                fill: false,
+                hidden: true,
+              },
+              {
+                label: 'Failed',
+                data: failSeries,
+                borderColor: '#DC2626',
+                borderWidth: 1.5,
+                borderDash: [2, 3],
+                tension: 0.25,
+                pointRadius: 0,
+                fill: false,
+                hidden: true,
+              },
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            scales: {
+              x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+              y: {
+                beginAtZero: true,
+                max: data.totalScenarios,
+                grid: { color: '#F0F2F5' },
+                ticks: { font: { size: 11 } },
+              }
+            },
+            plugins: {
+              legend: { position: 'top', align: 'end', labels: { boxWidth: 12, font: { size: 11 } } },
+              tooltip: {
+                backgroundColor: 'rgba(31, 41, 55, 0.96)',
+                titleFont: { size: 12 },
+                bodyFont: { size: 11 },
+                padding: 10,
+                callbacks: {
+                  label: (ctx) => {
+                    if (ctx.parsed.y === null) return null;
+                    return `${ctx.dataset.label}: ${ctx.parsed.y}`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // ---- Donut chart ----
+      let donutChart = null;
+      function renderDonut() {
+        const cur = Dashboard.computeCurrentActuals(data, actuals);
+        const ctx = document.getElementById("donutChart").getContext("2d");
+        const passN = cur.total.pass, failN = cur.total.fail, ipN = cur.total.inProgress, nsN = cur.total.notStarted;
+        if (donutChart) donutChart.destroy();
+        donutChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Passed', 'Failed', 'In Progress', 'Not Started'],
+            datasets: [{
+              data: [passN, failN, ipN, nsN],
+              backgroundColor: ['#16A34A', '#DC2626', '#F59E0B', '#D5DAE0'],
+              borderWidth: 2,
+              borderColor: '#fff',
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '68%',
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed} (${(ctx.parsed / data.totalScenarios * 100).toFixed(1)}%)` } }
+            }
+          }
+        });
+        // Custom legend
+        const legend = document.getElementById("donutLegend");
+        legend.innerHTML = `
+          <div class="flex"><span class="status-dot pass"></span>Passed <strong style="margin-left:auto">${passN}</strong></div>
+          <div class="flex"><span class="status-dot fail"></span>Failed <strong style="margin-left:auto">${failN}</strong></div>
+          <div class="flex"><span class="status-dot in-progress"></span>In Progress <strong style="margin-left:auto">${ipN}</strong></div>
+          <div class="flex"><span class="status-dot not-started"></span>Not Started <strong style="margin-left:auto">${nsN}</strong></div>
+        `;
+      }
+
+      // ---- Module breakdown bars ----
+      let activeFilter = "all";
+      function renderModules() {
+        const cur = Dashboard.computeCurrentActuals(data, actuals);
+        const today = Dashboard.todayISO();
+        const validDays = data.workingDays.filter(d => d <= today);
+        const lastDay = validDays.length ? validDays[validDays.length - 1] : data.workingDays[0];
+        const plannedSrc = validDays.length ? planned[lastDay].perModule : {};
+
+        const container = document.getElementById("moduleProgress");
+        container.innerHTML = "";
+        data.modules.forEach(mod => {
+          const a = cur.perModule[mod.id];
+          const plannedN = plannedSrc[mod.id] || 0;
+          // Filter logic — show module only if it has any of the filtered status
+          let visible = true;
+          if (activeFilter === "pass") visible = a.pass > 0;
+          else if (activeFilter === "fail") visible = a.fail > 0;
+          else if (activeFilter === "in-progress") visible = a.inProgress > 0;
+          else if (activeFilter === "not-started") visible = a.notStarted > 0;
+          if (!visible) return;
+
+          const done = a.pass + a.fail + a.inProgress;
+          const pct = a.total ? (done / a.total) * 100 : 0;
+          const row = document.createElement("div");
+          row.className = "progress-row";
+          row.innerHTML = `
+            <div class="label">${mod.name}<span class="sub">${a.total} scenarios</span></div>
+            <div class="progress-bar"></div>
+            <div class="pct">${pct.toFixed(0)}%</div>
+            <div class="count">${done}/${a.total}</div>
+          `;
+          container.appendChild(row);
+          Dashboard.renderProgressBar(row.querySelector(".progress-bar"), a.total, a, plannedN);
+        });
+        if (!container.children.length) {
+          container.innerHTML = `<div style="padding:24px;text-align:center;color:var(--grey-500);font-size:12px">No modules match this filter.</div>`;
+        }
+      }
+
+      // ---- Filter bar ----
+      document.getElementById("filterBar").addEventListener("click", (e) => {
+        const chip = e.target.closest(".filter-chip");
+        if (!chip) return;
+        document.querySelectorAll("#filterBar .filter-chip").forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+        activeFilter = chip.dataset.filter;
+        renderModules();
+      });
+
+      // ---- Daily entry form ----
+      const entryDate = document.getElementById("entryDate");
+      data.workingDays.forEach(day => {
+        const opt = document.createElement("option");
+        opt.value = day;
+        opt.textContent = Dashboard.fmtFull(day);
+        entryDate.appendChild(opt);
+      });
+      // Default to today (or latest working day <= today)
+      const today = Dashboard.todayISO();
+      const closestDay = data.workingDays.filter(d => d <= today).pop() || data.workingDays[0];
+      entryDate.value = closestDay;
+
+      function renderEntryForm() {
+        const day = entryDate.value;
+        const dayActuals = actuals[day] || {};
+        const dayPlanned = planned[day] || { perModule: {} };
+        const tbody = document.getElementById("entryBody");
+        tbody.innerHTML = "";
+        let totTotal = 0, totPlanned = 0, totPass = 0, totFail = 0, totIp = 0;
+        data.modules.forEach(mod => {
+          const a = dayActuals[mod.id] || {};
+          const plannedN = dayPlanned.perModule[mod.id] || 0;
+          const pass = a.pass || 0;
+          const fail = a.fail || 0;
+          const ip = a.inProgress || 0;
+          const done = pass + fail + ip;
+          const dlt = done - plannedN;
+          const dCls = dlt > 0 ? "up" : (dlt < 0 ? "down" : "flat");
+          const dSign = dlt > 0 ? "+" : "";
+          totTotal += mod.scenarios;
+          totPlanned += plannedN;
+          totPass += pass;
+          totFail += fail;
+          totIp += ip;
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><strong>${mod.name}</strong></td>
+            <td class="num planned-cell">${mod.scenarios}</td>
+            <td class="num planned-cell">${plannedN}</td>
+            <td class="num"><input type="number" class="pass-input" min="0" max="${mod.scenarios}" value="${pass}" data-mod="${mod.id}" data-status="pass" /></td>
+            <td class="num"><input type="number" class="fail-input" min="0" max="${mod.scenarios}" value="${fail}" data-mod="${mod.id}" data-status="fail" /></td>
+            <td class="num"><input type="number" class="ip-input"   min="0" max="${mod.scenarios}" value="${ip}"   data-mod="${mod.id}" data-status="inProgress" /></td>
+            <td class="num total-cell">${done}</td>
+            <td class="num delta-cell ${dCls}">${dlt === 0 ? "—" : dSign + dlt}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+        const totDone = totPass + totFail + totIp;
+        const totDlt = totDone - totPlanned;
+        const totDCls = totDlt > 0 ? "up" : (totDlt < 0 ? "down" : "flat");
+        const totDSign = totDlt > 0 ? "+" : "";
+        document.getElementById("totTotal").textContent = totTotal;
+        document.getElementById("totPlanned").textContent = totPlanned;
+        document.getElementById("totPass").textContent = totPass;
+        document.getElementById("totFail").textContent = totFail;
+        document.getElementById("totIp").textContent = totIp;
+        document.getElementById("totDone").textContent = totDone;
+        const tdEl = document.getElementById("totDelta");
+        tdEl.textContent = totDlt === 0 ? "—" : totDSign + totDlt;
+        tdEl.className = "num delta-cell " + totDCls;
+
+        // Wire up inputs
+        tbody.querySelectorAll("input[type=number]").forEach(inp => {
+          inp.addEventListener("input", () => {
+            const day = entryDate.value;
+            actuals[day] = actuals[day] || {};
+            const modId = inp.dataset.mod;
+            actuals[day][modId] = actuals[day][modId] || {};
+            actuals[day][modId][inp.dataset.status] = parseInt(inp.value, 10) || 0;
+            renderEntryFooter();
+          });
+        });
+      }
+      function renderEntryFooter() {
+        // Lightweight refresh of just the totals row, keeps focus on input
+        const day = entryDate.value;
+        const dayActuals = actuals[day] || {};
+        const dayPlanned = planned[day] || { perModule: {} };
+        let totTotal = 0, totPlanned = 0, totPass = 0, totFail = 0, totIp = 0;
+        data.modules.forEach(mod => {
+          const a = dayActuals[mod.id] || {};
+          totTotal += mod.scenarios;
+          totPlanned += dayPlanned.perModule[mod.id] || 0;
+          totPass += a.pass || 0;
+          totFail += a.fail || 0;
+          totIp += a.inProgress || 0;
+        });
+        const totDone = totPass + totFail + totIp;
+        const totDlt = totDone - totPlanned;
+        document.getElementById("totTotal").textContent = totTotal;
+        document.getElementById("totPlanned").textContent = totPlanned;
+        document.getElementById("totPass").textContent = totPass;
+        document.getElementById("totFail").textContent = totFail;
+        document.getElementById("totIp").textContent = totIp;
+        document.getElementById("totDone").textContent = totDone;
+        const tdEl = document.getElementById("totDelta");
+        const totDCls = totDlt > 0 ? "up" : (totDlt < 0 ? "down" : "flat");
+        const totDSign = totDlt > 0 ? "+" : "";
+        tdEl.textContent = totDlt === 0 ? "—" : totDSign + totDlt;
+        tdEl.className = "num delta-cell " + totDCls;
+      }
+      entryDate.addEventListener("change", renderEntryForm);
+
+      // Module config form
+      function renderConfig() {
+        const tbody = document.getElementById("configBody");
+        tbody.innerHTML = "";
+        let total = 0;
+        data.modules.forEach(mod => {
+          total += mod.scenarios;
+          const tdays = mod.testingDays.map(d => Dashboard.fmtShort(d)).join(", ");
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><strong>${mod.name}</strong></td>
+            <td class="num"><input type="number" min="0" max="999" value="${mod.scenarios}" data-mod="${mod.id}" class="cfg-input" /></td>
+            <td style="color:var(--grey-500);font-size:12px">${tdays}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+        document.getElementById("cfgTotal").textContent = total;
+
+        tbody.querySelectorAll("input.cfg-input").forEach(inp => {
+          inp.addEventListener("input", () => {
+            const modId = inp.dataset.mod;
+            const newVal = Math.max(0, parseInt(inp.value, 10) || 0);
+            const mod = data.modules.find(m => m.id === modId);
+            mod.scenarios = newVal;
+            cfgOverrides[modId] = { scenarios: newVal };
+            localStorage.setItem(cfgKey, JSON.stringify(cfgOverrides));
+            data.totalScenarios = data.modules.reduce((s, m) => s + m.scenarios, 0);
+            document.getElementById("cfgTotal").textContent = data.totalScenarios;
+            // Re-render dependent views
+            const newPlanned = Dashboard.computePlannedPerDay(data);
+            for (const k in newPlanned) planned[k] = newPlanned[k];
+            renderAll();
+          });
+        });
+      }
+
+      // Calendar heatmap
+      function renderCalendar() {
+        const cont = document.getElementById("calendar");
+        cont.innerHTML = "";
+        const today = Dashboard.todayISO();
+        // Combine working days + non-working days into a single sorted sequence covering 27 Apr to 22 May
+        const allDays = [];
+        const start = new Date(data.startDate + "T00:00:00");
+        const end = new Date(data.endDate + "T00:00:00");
+        for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+          allDays.push(d.toISOString().slice(0, 10));
+        }
+        const actualPerDay = Dashboard.computeActualPerDay(data, actuals);
+        allDays.forEach(day => {
+          const isWorking = data.workingDays.includes(day);
+          const nonWorking = data.nonWorkingDays.find(n => n.date === day);
+          const isToday = day === today;
+          let cls = "day";
+          if (!isWorking) cls += " non-working";
+          if (isToday) cls += " today";
+          // Progress indicator: compare actual vs planned for this day
+          if (isWorking && day <= today) {
+            const plnd = planned[day]?.total || 0;
+            const acdone = actualPerDay[day]?.totalDone || 0;
+            if (plnd > 0) {
+              if (acdone >= plnd) cls += " has-progress";
+              else if (acdone >= plnd * 0.7) cls += " has-progress partial";
+              else if (acdone > 0) cls += " has-progress behind";
+            }
+          }
+          const dt = new Date(day + "T00:00:00");
+          const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+          const tip = (nonWorking ? nonWorking.label + " — " : "") + Dashboard.fmtFull(day) +
+            (isWorking && day <= today ? ` — Actual: ${actualPerDay[day]?.totalDone || 0} / Planned: ${planned[day]?.total || 0}` : "");
+          cont.innerHTML += `<div class="${cls}" title="${tip}"><span class="d">${dt.getUTCDate()}</span><span class="m">${m[dt.getUTCMonth()]}</span></div>`;
+        });
+      }
+
+      function renderAll() {
+        renderKPIs();
+        renderLineChart();
+        renderDonut();
+        renderModules();
+        renderEntryForm();
+        renderConfig();
+        renderCalendar();
+      }
+
+      // Save & reset buttons
+      document.getElementById("btnSave").addEventListener("click", () => {
+        Dashboard.saveActuals(REGION_CODE, actuals);
+        Dashboard.showToast("Saved! Refreshing dashboard…");
+        setTimeout(() => renderAll(), 100);
+      });
+      document.getElementById("btnReset").addEventListener("click", () => {
+        if (!confirm("Clear all your saved progress for this region? (Module config will remain.)")) return;
+        Dashboard.clearActuals(REGION_CODE);
+        actuals = {};
+        renderAll();
+        Dashboard.showToast("Cleared.");
+      });
+
+      renderAll();
+    }
+  </script>
+</body>
+</html>

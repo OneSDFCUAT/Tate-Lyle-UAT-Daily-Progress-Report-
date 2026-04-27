@@ -1,0 +1,88 @@
+{
+  "region": "APAC",
+  "regionCode": "apac",
+  "totalScenarios": 143,
+  "startDate": "2026-04-27",
+  "endDate": "2026-05-22",
+  "workingDays": [
+    "2026-04-27", "2026-04-28", "2026-04-29", "2026-04-30",
+    "2026-05-04", "2026-05-05", "2026-05-06", "2026-05-07", "2026-05-08",
+    "2026-05-11", "2026-05-12", "2026-05-13", "2026-05-14", "2026-05-15",
+    "2026-05-18", "2026-05-19", "2026-05-20", "2026-05-21", "2026-05-22"
+  ],
+  "nonWorkingDays": [
+    {"date": "2026-05-01", "label": "Public holiday (CN, ID, MY, SG)"}
+  ],
+  "modules": [
+    {
+      "id": "leads",
+      "name": "Leads",
+      "scenarios": 15,
+      "testingDays": ["2026-04-27", "2026-04-28"],
+      "color": "#5A6F8F"
+    },
+    {
+      "id": "contacts",
+      "name": "Contacts",
+      "scenarios": 15,
+      "testingDays": ["2026-04-27", "2026-04-28"],
+      "color": "#5A6F8F"
+    },
+    {
+      "id": "accounts",
+      "name": "Accounts",
+      "scenarios": 15,
+      "testingDays": ["2026-04-27", "2026-04-28"],
+      "color": "#5A6F8F"
+    },
+    {
+      "id": "call-reports",
+      "name": "Call Reports",
+      "scenarios": 10,
+      "testingDays": ["2026-04-27", "2026-04-28"],
+      "color": "#5A6F8F"
+    },
+    {
+      "id": "opportunities",
+      "name": "Opportunities",
+      "scenarios": 30,
+      "testingDays": ["2026-04-28", "2026-04-29"],
+      "color": "#6B5BD2"
+    },
+    {
+      "id": "tech-dev",
+      "name": "Tech Dev Projects",
+      "scenarios": 15,
+      "testingDays": ["2026-04-30", "2026-05-04", "2026-05-05"],
+      "color": "#6B5BD2"
+    },
+    {
+      "id": "tech-push",
+      "name": "Tech Push Projects",
+      "scenarios": 15,
+      "testingDays": ["2026-04-30", "2026-05-04", "2026-05-05"],
+      "color": "#6B5BD2"
+    },
+    {
+      "id": "samples",
+      "name": "Samples",
+      "scenarios": 15,
+      "testingDays": ["2026-05-06", "2026-05-07", "2026-05-08"],
+      "color": "#16A34A"
+    },
+    {
+      "id": "initiatives",
+      "name": "Initiatives",
+      "scenarios": 8,
+      "testingDays": ["2026-05-06"],
+      "color": "#16A34A"
+    },
+    {
+      "id": "sap-integrations",
+      "name": "Accounts & Products Integrations (SAP)",
+      "scenarios": 5,
+      "testingDays": ["2026-05-04"],
+      "color": "#F25C5C"
+    }
+  ]
+}

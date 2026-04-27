@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UAT Progress · Tate & Lyle</title>
+  <link rel="stylesheet" href="assets/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+  <div id="topbar-mount"></div>
+
+  <div class="page" id="page">
+    <div class="page-header">
+      <div class="page-title">
+        <div class="breadcrumbs">
+          <span>UAT Progress</span>
+          <span class="sep">›</span>
+          <span>Overview</span>
+        </div>
+        <h1>UAT Progress Overview <span class="pill coral" style="margin-left:8px;vertical-align:middle">Live</span></h1>
+      </div>
+      <div class="flex gap-sm">
+        <span class="muted" style="font-size:12px">Salesforce UAT · 27 Apr – 22 May 2026</span>
+      </div>
+    </div>
+
+    <!-- Combined KPIs -->
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <!-- Per-region cards -->
+    <div class="region-grid" id="regionCards"></div>
+
+    <!-- Combined charts -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <h3>Combined Progress — All Regions</h3>
+          <div class="actions"><span class="muted" style="font-size:11px">Cumulative completed scenarios</span></div>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap tall"><canvas id="combinedChart"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Status Distribution</h3>
+          <div class="actions"><span class="muted" style="font-size:11px">All regions, all modules</span></div>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap donut"><canvas id="combinedDonut"></canvas></div>
+          <div id="donutLegend" style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Region comparison bars -->
+    <div class="card mb-md">
+      <div class="card-header">
+        <h3>Region-by-Region Pass Rate</h3>
+        <div class="actions"><span class="muted" style="font-size:11px">Pass / Fail / In Progress / Not Started</span></div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div id="regionBars" style="padding:8px 18px"></div>
+      </div>
+    </div>
+
+    <!-- Module rollup across regions -->
+    <div class="card mb-md">
+      <div class="card-header">
+        <h3>Module Status — All Regions Combined</h3>
+        <div class="actions">
+          <div class="filter-bar" id="filterBar">
+            <span class="muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px">Filter:</span>
+            <button class="filter-chip active" data-filter="all">All</button>
+            <button class="filter-chip" data-filter="pass"><span class="dot pass"></span>Pass</button>
+            <button class="filter-chip" data-filter="fail"><span class="dot fail"></span>Fail</button>
+            <button class="filter-chip" data-filter="in-progress"><span class="dot in-progress"></span>In Progress</button>
+            <button class="filter-chip" data-filter="not-started"><span class="dot not-started"></span>Not Started</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Module</th>
+              <th class="num">Total</th>
+              <th class="num">Planned</th>
+              <th class="num">Pass</th>
+              <th class="num">Fail</th>
+              <th class="num">In Progress</th>
+              <th class="num">Not Started</th>
+              <th>Progress</th>
+            </tr>
+          </thead>
+          <tbody id="moduleRollup"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    UAT Progress Dashboard · Tate &amp; Lyle ·
+    Each region's actuals are stored locally in your browser.
+  </div>
+
+  <script src="assets/dashboard.js"></script>
+  <script>
+    // Embed all region data inline so the page works on file:// and any static host
+    const REGION_DATA = {
+  "apac": {
+    "region": "APAC",
+    "regionCode": "apac",
+    "totalScenarios": 143,
+    "startDate": "2026-04-27",
+    "endDate": "2026-05-22",
+    "workingDays": [
+      "2026-04-27",
+      "2026-04-28",
+      "2026-04-29",
+      "2026-04-30",
+      "2026-05-04",
+      "2026-05-05",
+      "2026-05-06",
+      "2026-05-07",
+      "2026-05-08",
+      "2026-05-11",
+      "2026-05-12",
+      "2026-05-13",
+      "2026-05-14",
+      "2026-05-15",
+      "2026-05-18",
+      "2026-05-19",
+      "2026-05-20",
+      "2026-05-21",
+      "2026-05-22"
+    ],
+    "nonWorkingDays": [
+      {
+        "date": "2026-05-01",
+        "label": "Public holiday (CN, ID, MY, SG)"
+      }
+    ],
+    "modules": [
+      {
+        "id": "leads",
+        "name": "Leads",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-04-27",
+          "2026-04-28"
+        ],
+        "color": "#5A6F8F"
+      },
+      {
+        "id": "contacts",
+        "name": "Contacts",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-04-27",
+          "2026-04-28"
+        ],
+        "color": "#5A6F8F"
+      },
+      {
+        "id": "accounts",
+        "name": "Accounts",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-04-27",
+          "2026-04-28"
+        ],
+        "color": "#5A6F8F"
+      },
+      {
+        "id": "call-reports",
+        "name": "Call Reports",
+        "scenarios": 10,
+        "testingDays": [
+          "2026-04-27",
+          "2026-04-28"
+        ],
+        "color": "#5A6F8F"
+      },
+      {
+        "id": "opportunities",
+        "name": "Opportunities",
+        "scenarios": 30,
+        "testingDays": [
+          "2026-04-28",
+          "2026-04-29"
+        ],
+        "color": "#6B5BD2"
+      },
+      {
+        "id": "tech-dev",
+        "name": "Tech Dev Projects",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-04-30",
+          "2026-05-04",
+          "2026-05-05"
+        ],
+        "color": "#6B5BD2"
+      },
+      {
+        "id": "tech-push",
+        "name": "Tech Push Projects",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-04-30",
+          "2026-05-04",
+          "2026-05-05"
+        ],
+        "color": "#6B5BD2"
+      },
+      {
+        "id": "samples",
+        "name": "Samples",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-05-06",
+          "2026-05-07",
+          "2026-05-08"
+        ],
+        "color": "#16A34A"
+      },
+      {
+        "id": "initiatives",
+        "name": "Initiatives",
+        "scenarios": 8,
+        "testingDays": [
+          "2026-05-06"
+        ],
+        "color": "#16A34A"
+      },
+      {
+        "id": "sap-integrations",
+        "name": "Accounts & Products Integrations (SAP)",
+        "scenarios": 5,
+        "testingDays": [
+          "2026-05-04"
+        ],
+        "color": "#F25C5C"
+      }
+    ]
+  },
+  "americas": {
+    "region": "Americas",
+    "regionCode": "americas",
+    "totalScenarios": 143,
+    "startDate": "2026-04-27",
+    "endDate": "2026-05-22",
+    "workingDays": [
+      "2026-04-27",
+      "2026-04-28",
+      "2026-04-29",
+      "2026-04-30",
+      "2026-05-01",
+      "2026-05-04",
+      "2026-05-05",
+      "2026-05-06",
+      "2026-05-07",
+      "2026-05-08",
+      "2026-05-11",
+      "2026-05-12",
+      "2026-05-13",
+      "2026-05-14",
+      "2026-05-15",
+      "2026-05-18",
+      "2026-05-19",
+      "2026-05-20",
+      "2026-05-21",
+      "2026-05-22"
+    ],
+    "nonWorkingDays": [
+      {
+        "date": "2026-05-01",
+        "label": "Regional non-working day in some states"
+      }
+    ],
+    "modules": [
+      {
+        "id": "leads",
+        "name": "Leads",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-04-27",
+          "2026-04-28"
+        ],
+        "color": "#5A6F8F"
+      },
+      {
+        "id": "contacts",
+        "name": "Contacts",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-04-27",
+          "2026-04-28"
+        ],
+        "color": "#5A6F8F"
+      },
+      {
+        "id": "accounts",
+        "name": "Accounts",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-04-27",
+          "2026-04-28"
+        ],
+        "color": "#5A6F8F"
+      },
+      {
+        "id": "call-reports",
+        "name": "Call Reports",
+        "scenarios": 10,
+        "testingDays": [
+          "2026-04-27",
+          "2026-04-28"
+        ],
+        "color": "#5A6F8F"
+      },
+      {
+        "id": "opportunities",
+        "name": "Opportunities",
+        "scenarios": 30,
+        "testingDays": [
+          "2026-04-28",
+          "2026-04-29",
+          "2026-04-30",
+          "2026-05-01"
+        ],
+        "color": "#6B5BD2"
+      },
+      {
+        "id": "tech-dev",
+        "name": "Tech Dev Projects",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-05-01",
+          "2026-05-04",
+          "2026-05-05"
+        ],
+        "color": "#6B5BD2"
+      },
+      {
+        "id": "tech-push",
+        "name": "Tech Push Projects",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-05-01",
+          "2026-05-04",
+          "2026-05-05"
+        ],
+        "color": "#6B5BD2"
+      },
+      {
+        "id": "samples",
+        "name": "Samples",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-05-06",
+          "2026-05-07",
+          "2026-05-08",
+          "2026-05-11"
+        ],
+        "color": "#16A34A"
+      },
+      {
+        "id": "initiatives",
+        "name": "Initiatives",
+        "scenarios": 8,
+        "testingDays": [
+          "2026-05-05"
+        ],
+        "color": "#16A34A"
+      },
+      {
+        "id": "sap-integrations",
+        "name": "Accounts & Products Integrations (SAP)",
+        "scenarios": 5,
+        "testingDays": [
+          "2026-05-04"
+        ],
+        "color": "#F25C5C"
+      }
+    ]
+  },
+  "emea": {
+    "region": "EMEA",
+    "regionCode": "emea",
+    "totalScenarios": 143,
+    "startDate": "2026-04-29",
+    "endDate": "2026-05-22",
+    "workingDays": [
+      "2026-04-29",
+      "2026-04-30",
+      "2026-05-04",
+      "2026-05-05",
+      "2026-05-06",
+      "2026-05-07",
+      "2026-05-08",
+      "2026-05-11",
+      "2026-05-12",
+      "2026-05-13",
+      "2026-05-14",
+      "2026-05-15",
+      "2026-05-18",
+      "2026-05-19",
+      "2026-05-20",
+      "2026-05-21",
+      "2026-05-22"
+    ],
+    "nonWorkingDays": [
+      {
+        "date": "2026-05-01",
+        "label": "Bank holiday (BE, FR, DE)"
+      }
+    ],
+    "modules": [
+      {
+        "id": "leads",
+        "name": "Leads",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-04-29"
+        ],
+        "color": "#5A6F8F"
+      },
+      {
+        "id": "contacts",
+        "name": "Contacts",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-04-29"
+        ],
+        "color": "#5A6F8F"
+      },
+      {
+        "id": "accounts",
+        "name": "Accounts",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-04-29"
+        ],
+        "color": "#5A6F8F"
+      },
+      {
+        "id": "call-reports",
+        "name": "Call Reports",
+        "scenarios": 10,
+        "testingDays": [
+          "2026-04-29"
+        ],
+        "color": "#5A6F8F"
+      },
+      {
+        "id": "opportunities",
+        "name": "Opportunities",
+        "scenarios": 30,
+        "testingDays": [
+          "2026-04-29",
+          "2026-04-30",
+          "2026-05-04",
+          "2026-05-05",
+          "2026-05-06"
+        ],
+        "color": "#6B5BD2"
+      },
+      {
+        "id": "tech-dev",
+        "name": "Tech Dev Projects",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-05-05",
+          "2026-05-06",
+          "2026-05-07"
+        ],
+        "color": "#6B5BD2"
+      },
+      {
+        "id": "tech-push",
+        "name": "Tech Push Projects",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-05-05",
+          "2026-05-06",
+          "2026-05-07"
+        ],
+        "color": "#6B5BD2"
+      },
+      {
+        "id": "samples",
+        "name": "Samples",
+        "scenarios": 15,
+        "testingDays": [
+          "2026-05-06",
+          "2026-05-07",
+          "2026-05-08"
+        ],
+        "color": "#16A34A"
+      },
+      {
+        "id": "initiatives",
+        "name": "Initiatives",
+        "scenarios": 8,
+        "testingDays": [
+          "2026-05-07"
+        ],
+        "color": "#16A34A"
+      },
+      {
+        "id": "sap-integrations",
+        "name": "Accounts & Products Integrations (SAP)",
+        "scenarios": 5,
+        "testingDays": [
+          "2026-05-01"
+        ],
+        "color": "#F25C5C"
+      }
+    ]
+  }
+};
+
+    document.getElementById("topbar-mount").outerHTML = Dashboard.renderTopbar("overview");
+
+    initOverview(REGION_DATA);
+
+    function initOverview(allData) {
+      // For each region, load actuals + apply config overrides + compute current state
+      const regions = ["apac", "americas", "emea"];
+      const states = {};
+      regions.forEach(r => {
+        const data = JSON.parse(JSON.stringify(allData[r]));
+        const cfgKey = `uat_dashboard_${r}_config_v1`;
+        let cfgOverrides = {};
+        try { cfgOverrides = JSON.parse(localStorage.getItem(cfgKey) || "{}"); } catch (e) {}
+        data.modules.forEach(m => {
+          if (cfgOverrides[m.id] && typeof cfgOverrides[m.id].scenarios === "number") {
+            m.scenarios = cfgOverrides[m.id].scenarios;
+          }
+        });
+        data.totalScenarios = data.modules.reduce((s, m) => s + m.scenarios, 0);
+
+        const actuals = Dashboard.loadActuals(r);
+        const planned = Dashboard.computePlannedPerDay(data);
+        const cur = Dashboard.computeCurrentActuals(data, actuals);
+        const today = Dashboard.todayISO();
+        const validDays = data.workingDays.filter(d => d <= today);
+        const lastDay = validDays.length ? validDays[validDays.length - 1] : data.workingDays[0];
+        // If today is before the region's first working day, planned should be 0
+        const plannedToday = validDays.length ? planned[lastDay].total : 0;
+        states[r] = { data, actuals, planned, cur, plannedToday, lastDay };
+      });
+
+      // ---- KPIs ----
+      const totals = { total: 0, plannedToday: 0, pass: 0, fail: 0, ip: 0, ns: 0 };
+      regions.forEach(r => {
+        const s = states[r];
+        totals.total += s.data.totalScenarios;
+        totals.plannedToday += s.plannedToday;
+        totals.pass += s.cur.total.pass;
+        totals.fail += s.cur.total.fail;
+        totals.ip += s.cur.total.inProgress;
+        totals.ns += s.cur.total.notStarted;
+      });
+      const totalDone = totals.pass + totals.fail + totals.ip;
+      const delta = totalDone - totals.plannedToday;
+      const dCls = delta > 0 ? "up" : (delta < 0 ? "down" : "flat");
+      const dSign = delta > 0 ? "+" : "";
+      const passPct = totals.total ? (totals.pass / totals.total) * 100 : 0;
+      document.getElementById("kpiRow").innerHTML = `
+        <div class="kpi">
+          <div class="kpi-label">Total Scenarios</div>
+          <div class="kpi-value">${totals.total}</div>
+          <div class="kpi-sub">across all 3 regions</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Planned by today</div>
+          <div class="kpi-value">${totals.plannedToday}<span class="unit">/ ${totals.total}</span></div>
+          <div class="kpi-sub">${totals.total ? (totals.plannedToday / totals.total * 100).toFixed(0) : 0}% of total</div>
+        </div>
+        <div class="kpi green">
+          <div class="kpi-label">Total Passed</div>
+          <div class="kpi-value">${totals.pass}<span class="unit">/ ${totals.total}</span></div>
+          <div class="kpi-sub">${passPct.toFixed(1)}% pass rate</div>
+        </div>
+        <div class="kpi red">
+          <div class="kpi-label">Total Failed</div>
+          <div class="kpi-value">${totals.fail}</div>
+          <div class="kpi-sub">${totals.total ? (totals.fail / totals.total * 100).toFixed(1) : 0}% fail rate</div>
+        </div>
+        <div class="kpi amber">
+          <div class="kpi-label">In Progress</div>
+          <div class="kpi-value">${totals.ip}</div>
+          <div class="kpi-sub">currently running</div>
+        </div>
+        <div class="kpi ${dCls === 'up' ? 'green' : (dCls === 'down' ? 'red' : 'slate')}">
+          <div class="kpi-label">Vs Planned</div>
+          <div class="kpi-value">${dSign}${delta}</div>
+          <div class="kpi-delta ${dCls}">${delta === 0 ? "On schedule" : (delta > 0 ? "Ahead of plan" : "Behind plan")}</div>
+        </div>
+      `;
+
+      // ---- Region cards ----
+      const regionLabels = { apac: "APAC", americas: "Americas", emea: "EMEA" };
+      const regionMeta = {
+        apac: "27 Apr – 22 May 2026",
+        americas: "27 Apr – 22 May 2026",
+        emea: "29 Apr – 22 May 2026",
+      };
+      const cards = document.getElementById("regionCards");
+      cards.innerHTML = "";
+      regions.forEach(r => {
+        const s = states[r];
+        const tot = s.data.totalScenarios;
+        const done = s.cur.total.pass + s.cur.total.fail + s.cur.total.inProgress;
+        const passN = s.cur.total.pass, failN = s.cur.total.fail, ipN = s.cur.total.inProgress, nsN = s.cur.total.notStarted;
+        const passPct = tot ? (passN / tot) * 100 : 0;
+        const failPct = tot ? (failN / tot) * 100 : 0;
+        const ipPct   = tot ? (ipN   / tot) * 100 : 0;
+        const plannedPct = tot ? (s.plannedToday / tot) * 100 : 0;
+        const delta = done - s.plannedToday;
+        const dColor = delta > 0 ? "var(--green)" : (delta < 0 ? "var(--red)" : "var(--grey-500)");
+        cards.innerHTML += `
+          <a class="region-card" href="${r}.html">
+            <div class="region-card-header">
+              <div>
+                <h2>${regionLabels[r]}</h2>
+                <div class="meta">${regionMeta[r]}</div>
+              </div>
+              <span class="arrow">→</span>
+            </div>
+            <div class="region-card-body">
+              <div class="region-card-stats">
+                <div class="region-card-stat green"><div class="v">${passN}</div><div class="l">Pass</div></div>
+                <div class="region-card-stat red"><div class="v">${failN}</div><div class="l">Fail</div></div>
+                <div class="region-card-stat amber"><div class="v">${ipN}</div><div class="l">In Progress</div></div>
+              </div>
+              <div class="region-card-progress">
+                <div class="label"><span>Progress</span><span>${done} / ${tot}</span></div>
+                <div class="progress-bar" id="rcb-${r}"></div>
+                <div class="planned-vs-actual">
+                  <div><span class="lp">Planned</span><span class="v">${s.plannedToday}</span></div>
+                  <div><span class="lp">Actual</span><span class="v">${done}</span></div>
+                  <div><span class="lp">Δ</span><span class="v" style="color:${dColor}">${delta > 0 ? "+" : ""}${delta === 0 ? "—" : delta}</span></div>
+                </div>
+              </div>
+            </div>
+          </a>
+        `;
+      });
+      // After insertion, render progress bars
+      regions.forEach(r => {
+        const s = states[r];
+        const tot = s.data.totalScenarios;
+        const a = { pass: s.cur.total.pass, fail: s.cur.total.fail, inProgress: s.cur.total.inProgress };
+        Dashboard.renderProgressBar(document.getElementById(`rcb-${r}`), tot, a, s.plannedToday);
+      });
+
+      // ---- Combined line chart ----
+      // Use the union of working days across all regions
+      const allDays = new Set();
+      regions.forEach(r => states[r].data.workingDays.forEach(d => allDays.add(d)));
+      const sortedDays = Array.from(allDays).sort();
+      const today = Dashboard.todayISO();
+
+      const plannedByDay = sortedDays.map(d => {
+        let total = 0;
+        regions.forEach(r => {
+          const s = states[r];
+          // For each region, find the latest planned point <= d (region may not have data for that day)
+          const valid = s.data.workingDays.filter(x => x <= d);
+          if (valid.length) {
+            const last = valid[valid.length - 1];
+            total += s.planned[last].total;
+          }
+        });
+        return total;
+      });
+      const actualByDay = sortedDays.map(d => {
+        if (d > today) return null;
+        let total = 0;
+        regions.forEach(r => {
+          const s = states[r];
+          const apd = Dashboard.computeActualPerDay(s.data, s.actuals);
+          const valid = s.data.workingDays.filter(x => x <= d);
+          if (valid.length) {
+            const last = valid[valid.length - 1];
+            total += apd[last].totalDone;
+          }
+        });
+        return total;
+      });
+
+      new Chart(document.getElementById("combinedChart").getContext("2d"), {
+        type: 'line',
+        data: {
+          labels: sortedDays.map(d => Dashboard.fmtShort(d)),
+          datasets: [
+            {
+              label: 'Planned (cumulative)',
+              data: plannedByDay,
+              borderColor: '#5A6F8F',
+              backgroundColor: 'rgba(90, 111, 143, 0.08)',
+              borderWidth: 2,
+              borderDash: [4, 4],
+              tension: 0.2,
+              pointRadius: 2,
+              fill: true
+            },
+            {
+              label: 'Actual completed',
+              data: actualByDay,
+              borderColor: '#16A34A',
+              backgroundColor: 'rgba(22, 163, 74, 0.1)',
+              borderWidth: 2.5,
+              tension: 0.25,
+              pointRadius: 3,
+              fill: false,
+              spanGaps: false,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { intersect: false, mode: 'index' },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+            y: { beginAtZero: true, max: totals.total, grid: { color: '#F0F2F5' }, ticks: { font: { size: 11 } } }
+          },
+          plugins: {
+            legend: { position: 'top', align: 'end', labels: { boxWidth: 12, font: { size: 11 } } },
+            tooltip: {
+              backgroundColor: 'rgba(31, 41, 55, 0.96)',
+              titleFont: { size: 12 },
+              bodyFont: { size: 11 },
+              padding: 10,
+            }
+          }
+        }
+      });
+
+      // ---- Combined donut ----
+      new Chart(document.getElementById("combinedDonut").getContext("2d"), {
+        type: 'doughnut',
+        data: {
+          labels: ['Passed', 'Failed', 'In Progress', 'Not Started'],
+          datasets: [{
+            data: [totals.pass, totals.fail, totals.ip, totals.ns],
+            backgroundColor: ['#16A34A', '#DC2626', '#F59E0B', '#D5DAE0'],
+            borderWidth: 2,
+            borderColor: '#fff',
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '68%',
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed} (${(ctx.parsed / totals.total * 100).toFixed(1)}%)` } }
+          }
+        }
+      });
+      document.getElementById("donutLegend").innerHTML = `
+        <div class="flex"><span class="status-dot pass"></span>Passed <strong style="margin-left:auto">${totals.pass}</strong></div>
+        <div class="flex"><span class="status-dot fail"></span>Failed <strong style="margin-left:auto">${totals.fail}</strong></div>
+        <div class="flex"><span class="status-dot in-progress"></span>In Progress <strong style="margin-left:auto">${totals.ip}</strong></div>
+        <div class="flex"><span class="status-dot not-started"></span>Not Started <strong style="margin-left:auto">${totals.ns}</strong></div>
+      `;
+
+      // ---- Region-by-region bars ----
+      const regionBars = document.getElementById("regionBars");
+      regionBars.innerHTML = "";
+      regions.forEach(r => {
+        const s = states[r];
+        const tot = s.data.totalScenarios;
+        const done = s.cur.total.pass + s.cur.total.fail + s.cur.total.inProgress;
+        const pct = tot ? (done / tot) * 100 : 0;
+        const a = { pass: s.cur.total.pass, fail: s.cur.total.fail, inProgress: s.cur.total.inProgress };
+        const row = document.createElement("div");
+        row.className = "progress-row";
+        row.innerHTML = `
+          <div class="label">${regionLabels[r]}<span class="sub">${tot} scenarios</span></div>
+          <div class="progress-bar"></div>
+          <div class="pct">${pct.toFixed(0)}%</div>
+          <div class="count">${done}/${tot}</div>
+        `;
+        regionBars.appendChild(row);
+        Dashboard.renderProgressBar(row.querySelector(".progress-bar"), tot, a, s.plannedToday);
+      });
+
+      // ---- Module rollup ----
+      let activeFilter = "all";
+      function renderModuleRollup() {
+        const tbody = document.getElementById("moduleRollup");
+        tbody.innerHTML = "";
+        // Aggregate per module across regions (using module id; module name from any region)
+        const moduleAgg = {};
+        regions.forEach(r => {
+          const s = states[r];
+          const today = Dashboard.todayISO();
+          const beforeStart = today < s.data.workingDays[0];
+          s.data.modules.forEach(mod => {
+            if (!moduleAgg[mod.id]) {
+              moduleAgg[mod.id] = { name: mod.name, total: 0, planned: 0, pass: 0, fail: 0, ip: 0, ns: 0 };
+            }
+            const a = s.cur.perModule[mod.id];
+            const plnd = beforeStart ? 0 : (s.planned[s.lastDay].perModule[mod.id] || 0);
+            moduleAgg[mod.id].total   += mod.scenarios;
+            moduleAgg[mod.id].planned += plnd;
+            moduleAgg[mod.id].pass    += a.pass;
+            moduleAgg[mod.id].fail    += a.fail;
+            moduleAgg[mod.id].ip      += a.inProgress;
+            moduleAgg[mod.id].ns      += a.notStarted;
+          });
+        });
+        Object.values(moduleAgg).forEach(m => {
+          let visible = true;
+          if (activeFilter === "pass") visible = m.pass > 0;
+          else if (activeFilter === "fail") visible = m.fail > 0;
+          else if (activeFilter === "in-progress") visible = m.ip > 0;
+          else if (activeFilter === "not-started") visible = m.ns > 0;
+          if (!visible) return;
+          const done = m.pass + m.fail + m.ip;
+          const pct = m.total ? (done / m.total) * 100 : 0;
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td class="module-cell">${m.name}</td>
+            <td class="num">${m.total}</td>
+            <td class="num muted">${m.planned}</td>
+            <td class="num" style="color:var(--green);font-weight:600">${m.pass}</td>
+            <td class="num" style="color:var(--red);font-weight:600">${m.fail}</td>
+            <td class="num" style="color:var(--amber);font-weight:600">${m.ip}</td>
+            <td class="num muted">${m.ns}</td>
+            <td><div class="progress-bar" style="height:18px;width:200px"></div></td>
+          `;
+          tbody.appendChild(tr);
+          const a = { pass: m.pass, fail: m.fail, inProgress: m.ip };
+          Dashboard.renderProgressBar(tr.querySelector(".progress-bar"), m.total, a, m.planned);
+        });
+        if (!tbody.children.length) {
+          tbody.innerHTML = `<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--grey-500);font-size:12px">No modules match this filter.</td></tr>`;
+        }
+      }
+      document.getElementById("filterBar").addEventListener("click", (e) => {
+        const chip = e.target.closest(".filter-chip");
+        if (!chip) return;
+        document.querySelectorAll("#filterBar .filter-chip").forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+        activeFilter = chip.dataset.filter;
+        renderModuleRollup();
+      });
+      renderModuleRollup();
+    }
+  </script>
+</body>
+</html>
